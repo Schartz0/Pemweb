@@ -50,7 +50,7 @@
 
         const nim = getNIMFromURL();
         if (nim) {
-            fetch('/mahasiswa/' + encodeURIComponent(nim), {
+            fetch('/api/mahasiswa/' + encodeURIComponent(nim), {
                 headers: {'Accept': 'application/json'}
             })
             .then(async response => {
@@ -79,13 +79,11 @@
         // Ajax delete (opsional: reload/redirect setelah hapus)
         document.getElementById('deleteForm').addEventListener('submit', function(e) {
             e.preventDefault();
-            fetch(this.action, {
-                method: 'POST',
+            fetch('/api/mahasiswa/' + encodeURIComponent(nim), {
+                method: 'DELETE',
                 headers: {
-                    'Accept': 'application/json',
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                },
-                body: new URLSearchParams({'_method': 'DELETE'})
+                    'Accept': 'application/json'
+                }
             })
             .then(async response => {
                 if (response.ok) {

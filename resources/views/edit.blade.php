@@ -57,7 +57,7 @@
     
     // Fetch data mahasiswa untuk prefill form
     if (nim) {
-        fetch('/mahasiswa/' + encodeURIComponent(nim), {
+        fetch('/api/mahasiswa/' + encodeURIComponent(nim), {
             headers: {'Accept': 'application/json'}
         })
         .then(async response => {
@@ -87,16 +87,21 @@
     document.getElementById('editMahasiswaForm').addEventListener('submit', function(e) {
         e.preventDefault();
         const form = e.target;
-        const formData = new FormData(form);
+        const payload = {
+            nama: document.getElementById('nama').value,
+            semester: Number(document.getElementById('semester').value),
+            jenis_kelamin: document.getElementById('jenis_kelamin').value,
+            no_hp: document.getElementById('no_hp').value,
+            jurusan: document.getElementById('jurusan').value,
+        };
 
-        fetch('/mahasiswa/' + encodeURIComponent(nim), {
-            method: 'POST',
+        fetch('/api/mahasiswa/' + encodeURIComponent(nim), {
+            method: 'PUT',
             headers: {
                 'Accept': 'application/json',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                'X-HTTP-Method-Override': 'PUT'
+                'Content-Type': 'application/json'
             },
-            body: formData
+            body: JSON.stringify(payload)
         })
         .then(async response => {
             let data = await response.json();

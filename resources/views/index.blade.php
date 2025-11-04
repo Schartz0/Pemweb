@@ -63,13 +63,11 @@
                 if (!nim) return;
                 if (!confirm('Yakin hapus?')) return;
 
-                fetch('/mahasiswa/' + encodeURIComponent(nim), {
-                    method: 'POST',
+                fetch('/api/mahasiswa/' + encodeURIComponent(nim), {
+                    method: 'DELETE',
                     headers: {
-                        'Accept': 'application/json',
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                    },
-                    body: new URLSearchParams({ _method: 'DELETE' })
+                        'Accept': 'application/json'
+                    }
                 })
                 .then(async response => {
                     let messageEl = document.getElementById('responseMessage');

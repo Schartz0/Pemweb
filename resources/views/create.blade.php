@@ -45,15 +45,22 @@
     document.getElementById('mahasiswaForm').addEventListener('submit', function(e) {
         e.preventDefault();
         const form = e.target;
-        const formData = new FormData(form);
+        const payload = {
+            nim: document.getElementById('nim').value,
+            nama: document.getElementById('nama').value,
+            semester: Number(document.getElementById('semester').value),
+            jenis_kelamin: document.getElementById('jenis_kelamin').value,
+            no_hp: document.getElementById('no_hp').value,
+            jurusan: document.getElementById('jurusan').value,
+        };
 
-        fetch('/mahasiswa', {
+        fetch('/api/mahasiswa', {
             method: 'POST',
             headers: {
                 'Accept': 'application/json',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                'Content-Type': 'application/json'
             },
-            body: formData
+            body: JSON.stringify(payload)
         })
         .then(async response => {
             let data = await response.json();
