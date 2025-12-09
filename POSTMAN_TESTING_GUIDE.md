@@ -1,13 +1,51 @@
-# Panduan Testing API di Postman
+# Panduan Testing API di Postman (Dengan Bearer Token)
 
 ## Konfigurasi Dasar
 
-**Base URL:** `http://localhost:8000` (atau sesuai dengan server Laravel Anda)
+- Base URL: `http://localhost:8000`
+- Semua endpoint API berada di prefix `/api/*`
+- Header umum: `Accept: application/json`
 
-**Headers yang diperlukan:**
-- `Accept: application/json` (untuk semua request)
-- `Content-Type: application/json` (untuk POST/PUT/PATCH)
-- `X-CSRF-TOKEN: {token}` (untuk request yang memodifikasi data, jika diperlukan)
+## Otentikasi (Login & Logout)
+
+### 1) Login untuk mendapatkan token
+
+- Method: `POST`
+- URL: `http://localhost:8000/api/login`
+- Headers:
+  - `Accept: application/json`
+- Body (raw JSON):
+```json
+{
+  "email": "admin@example.com",
+  "password": "password"
+}
+```
+- Response sukses:
+```json
+{
+  "access_token": "<TOKEN>",
+  "token_type": "Bearer"
+}
+```
+- Simpan nilai `access_token` sebagai environment variable Postman bernama `token`.
+
+### 2) Menggunakan token pada request berikutnya
+
+- Tambahkan header: `Authorization: Bearer {{token}}`
+- Semua endpoint mahasiswa di bawah memerlukan header ini.
+
+### 3) Logout (menghapus token)
+
+- Method: `POST`
+- URL: `http://localhost:8000/api/logout`
+- Headers:
+  - `Accept: application/json`
+  - `Authorization: Bearer {{token}}`
+- Response sukses:
+```json
+{ "message": "Logged out" }
+```
 
 ---
 
@@ -22,6 +60,7 @@ Menampilkan daftar semua mahasiswa yang ada di database dalam format JSON.
 2. **URL:** `http://localhost:8000/api/mahasiswa`
 3. **Headers:**
    - `Accept: application/json`
+   - `Authorization: Bearer {{token}}`
 4. **Body:** Tidak perlu (GET request tidak perlu body)
 
 ### Contoh Response:
@@ -64,6 +103,7 @@ Membuat/menambahkan data mahasiswa baru ke dalam database.
 3. **Headers:**
    - `Accept: application/json`
    - `Content-Type: application/json`
+   - `Authorization: Bearer {{token}}`
 4. **Body** (pilih `raw` dan `JSON`):
 ```json
 {
@@ -127,6 +167,7 @@ Menampilkan detail data mahasiswa berdasarkan NIM (Nomor Induk Mahasiswa).
    - Ganti `1234567890` dengan NIM yang ingin dicari
 3. **Headers:**
    - `Accept: application/json`
+   - `Authorization: Bearer {{token}}`
 4. **Body:** Tidak perlu
 
 ### Contoh Response Sukses:
@@ -170,6 +211,7 @@ Mengupdate/mengubah data mahasiswa secara lengkap (semua field harus diisi).
 3. **Headers:**
    - `Accept: application/json`
    - `Content-Type: application/json`
+   - `Authorization: Bearer {{token}}`
 4. **Body** (pilih `raw` dan `JSON`):
 ```json
 {
@@ -225,6 +267,7 @@ Mengupdate/mengubah data mahasiswa secara parsial (hanya field yang dikirim yang
 3. **Headers:**
    - `Accept: application/json`
    - `Content-Type: application/json`
+   - `Authorization: Bearer {{token}}`
 4. **Body** (pilih `raw` dan `JSON`):
 ```json
 {
@@ -295,6 +338,7 @@ Menghapus data mahasiswa dari database berdasarkan NIM.
    - Ganti `1234567890` dengan NIM mahasiswa yang ingin dihapus
 3. **Headers:**
    - `Accept: application/json`
+   - `Authorization: Bearer {{token}}`
 4. **Body:** Tidak perlu
 
 ### Contoh Response Sukses:
@@ -329,6 +373,7 @@ Menghapus data mahasiswa dari database berdasarkan NIM.
 ### 2. Menggunakan Environment Variables
 Buat environment dengan variabel:
 - `base_url`: `http://localhost:8000`
+- `token`: diisi dari response login (`access_token`)
 - `nim`: `1234567890` (contoh NIM untuk testing)
 
 Kemudian gunakan di URL: `{{base_url}}/api/mahasiswa/{{nim}}`
@@ -344,11 +389,9 @@ Kemudian gunakan di URL: `{{base_url}}/api/mahasiswa/{{nim}}`
 8. **DELETE** - Hapus data
 9. **GET** - Verifikasi data sudah terhapus (harus 404)
 
-### 4. Menggunakan Pre-request Script
-Untuk auto-generate NIM atau data lainnya:
-```javascript
-pm.environment.set("nim", "1234567890");
-```
+### 4. Menambahkan Authorization otomatis
+- Cara mudah: di tab Authorization pilih `Bearer Token`, isi dengan `{{token}}`.
+- Atau gunakan header manual: `Authorization: Bearer {{token}}`.
 
 ### 5. Menggunakan Tests Script
 Untuk auto-verifikasi response:
@@ -372,9 +415,10 @@ pm.test("Response has nim field", function () {
 - Pastikan URL sudah benar (termasuk `/api/` prefix)
 - Pastikan method HTTP sudah benar (GET, POST, PUT, PATCH, DELETE)
 
-### Error: "CSRF token mismatch"
-- Untuk route API, biasanya tidak perlu CSRF token
-- Jika tetap error, pastikan middleware `VerifyCsrfToken` sudah meng-exclude route API
+### Error: "401 Unauthorized"
+- Pastikan sudah login dan menyimpan `access_token`.
+- Pastikan setiap request menyertakan header `Authorization: Bearer {{token}}`.
+- Jika token kedaluwarsa atau telah logout, login kembali untuk token baru.
 
 ### Error: "404 Not Found" saat GET detail
 - Pastikan NIM yang digunakan sudah ada di database
@@ -384,4 +428,3 @@ pm.test("Response has nim field", function () {
 - Cek validasi field yang dikirim
 - Pastikan semua required field sudah diisi
 - Pastikan format data sudah benar (integer untuk semester, dll)
-

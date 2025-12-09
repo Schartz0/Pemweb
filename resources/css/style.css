@@ -281,7 +281,7 @@ tbody td, thead th {
     pointer-events: none;
     z-index: 99;
     /* animasi geser dari kiri ke kanan di tengah layar setiap 10 detik */
-    animation: promoSlide 20s linear infinite;
+    animation: promoSlide 12s linear infinite;
     transition: opacity 10s;
 }
 

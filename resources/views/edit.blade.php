@@ -3,8 +3,37 @@
 <head>
     <title>Edit Mahasiswa</title>
     <!-- <link rel="stylesheet" href="{{ asset('style.css') }}"> -->
+    <meta name="api-token" content="{{ session('access_token') }}">
 </head>
 <body class="bg-light">
+    <script>
+    (function () {
+        const meta = document.querySelector('meta[name="api-token"]');
+        const sessionToken = meta && meta.content ? meta.content : null;
+        if (sessionToken) {
+            window.apiToken = sessionToken;
+            try {
+                localStorage.setItem('access_token', sessionToken);
+            } catch (err) {
+                console.warn('Tidak bisa menyimpan token ke localStorage:', err);
+            }
+        } else {
+            try {
+                window.apiToken = localStorage.getItem('access_token') || '';
+            } catch (err) {
+                window.apiToken = '';
+            }
+        }
+    })();
+
+    function withAuthHeaders(base) {
+        const headers = Object.assign({}, base || {});
+        if (window.apiToken) {
+            headers['Authorization'] = 'Bearer ' + window.apiToken;
+        }
+        return headers;
+    }
+    </script>
     <div class="container py-5">
         <h1 class="mb-4">Edit Mahasiswa</h1>
         <form id="editMahasiswaForm">
@@ -58,7 +87,7 @@
     // Fetch data mahasiswa untuk prefill form
     if (nim) {
         fetch('/api/mahasiswa/' + encodeURIComponent(nim), {
-            headers: {'Accept': 'application/json'}
+            headers: withAuthHeaders({'Accept': 'application/json'})
         })
         .then(async response => {
             if (response.ok) {
@@ -97,10 +126,10 @@
 
         fetch('/api/mahasiswa/' + encodeURIComponent(nim), {
             method: 'PUT',
-            headers: {
+            headers: withAuthHeaders({
                 'Accept': 'application/json',
                 'Content-Type': 'application/json'
-            },
+            }),
             body: JSON.stringify(payload)
         })
         .then(async response => {

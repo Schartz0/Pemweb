@@ -2,7 +2,7 @@
 <html>
 <head>
     <title>Daftar Mahasiswa</title>
-    <!-- @vite(['resources/css/style.css'])
+    <!-- @vite(['resources/css/style.css']) -->
     <style>
     /* Kustomisasi tambahan agar responsive dan harmonis dengan style.css */
     @media (max-width: 600px) {
@@ -14,11 +14,39 @@
     .mb-3 { margin-bottom: 1.2em; }
     .mb-4 { margin-bottom: 2em; }
     .text-center { text-align: center;}
-    </style> -->
+    </style>
 </head>
 <body class="bg-light">
+    <script>
+    function getToken() {
+        try { return localStorage.getItem('access_token') || ''; } catch (e) { return ''; }
+    }
+
+    function withAuthHeaders(base) {
+        const headers = Object.assign({}, base || {});
+        const t = getToken();
+        if (t) headers['Authorization'] = 'Bearer ' + t;
+        return headers;
+    }
+    </script>
     <div class="container py-5">
         <h1 class="mb-4">Daftar Mahasiswa</h1>
+        <button id="btnLogout" class="btn btn-secondary mb-3 float-end" style="margin-top:-16px;">Logout</button>
+        <script>
+        document.getElementById('btnLogout').addEventListener('click', function() {
+            fetch('/api/logout', {
+                method: 'POST',
+                headers: withAuthHeaders({ 'Accept': 'application/json' })
+            })
+            .then(() => {
+                try { localStorage.removeItem('access_token'); } catch {}
+                window.location.href = '/login';
+            })
+            .catch(() => {
+                alert('Logout gagal. Silakan refresh halaman.');
+            });
+        });
+        </script>
         <div id="responseMessage"></div>
         <a href="/mahasiswa/create" class="btn btn-success mb-3">Tambah Mahasiswa</a>
         <table class="table table-bordered table-striped align-middle">
@@ -33,35 +61,7 @@
                     <th>Aksi</th>
                 </tr>
             </thead>
-            <tbody>
-                <?php if (isset($mahasiswas) && count($mahasiswas)): ?>
-                    <?php foreach ($mahasiswas as $mhs): ?>
-                    <tr data-nim="<?= htmlspecialchars($mhs->nim) ?>">
-                        <td><?= htmlspecialchars($mhs->nim) ?></td>
-                        <td><?= htmlspecialchars($mhs->nama) ?></td>
-                        <td><?= htmlspecialchars($mhs->semester) ?></td>
-                        <td><?= htmlspecialchars($mhs->jenis_kelamin) ?></td>
-                        <td><?= htmlspecialchars($mhs->no_hp) ?></td>
-                        <td><?= htmlspecialchars($mhs->jurusan) ?></td>
-                        <td class="action-btns">
-                            <a href="/mahasiswa/<?= urlencode($mhs->nim) ?>" class="btn btn-info btn-sm">Lihat</a>
-                            <a href="/mahasiswa/<?= urlencode($mhs->nim) ?>/edit" class="btn btn-warning btn-sm">Edit</a>
-                            <button 
-                                type="button"
-                                class="btn btn-danger btn-sm btn-hapus"
-                                data-nim="<?= htmlspecialchars($mhs->nim) ?>"
-                            >
-                                Hapus
-                            </button>
-                        </td>
-                    </tr>
-                    <?php endforeach; ?>
-                <?php else: ?>
-                    <tr>
-                        <td colspan="7" class="text-center">Data mahasiswa tidak ditemukan.</td>
-                    </tr>
-                <?php endif; ?>
-            </tbody>
+            <tbody id="tbody"></tbody>
         </table>
         <img class="promo-gif" src="/images/wowo.gif" alt="Wowo" style="max-width:2000px; display:block; margin:18px auto 0 auto;">
     </div>
@@ -73,41 +73,94 @@
         setTimeout(() => { el.innerHTML = ''; }, 3000);
     }
 
-    document.querySelectorAll('.btn-hapus').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-            const nim = this.getAttribute('data-nim');
-            if (!nim) return;
-            if (!confirm('Yakin ingin menghapus mahasiswa ini?')) return;
+    async function loadMahasiswa() {
+        const tbody = document.getElementById('tbody');
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center">Memuat...</td></tr>';
+        try {
+            const res = await fetch('/api/mahasiswa', { headers: withAuthHeaders({ 'Accept':'application/json' }) });
+            const ct = res.headers.get('content-type') || '';
+            const isJson = ct.includes('application/json');
+            if (!res.ok) {
+                const payload = isJson ? await res.json().catch(()=>({})) : await res.text().catch(()=> '');
+                const msg = isJson ? (payload.message || 'Gagal memuat data') : (payload || 'Gagal memuat data');
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center">'+msg+'</td></tr>';
+                return;
+            }
+            const list = isJson ? await res.json() : [];
+            if (!Array.isArray(list) || list.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center">Data mahasiswa tidak ditemukan.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = list.map(function(m){
+                const nim = String(m.nim || '');
+                const nama = String(m.nama || '');
+                const semester = String(m.semester ?? '');
+                const jk = String(m.jenis_kelamin || '');
+                const nohp = String(m.no_hp || '');
+                const jurusan = String(m.jurusan || '');
+                return (
+                    '<tr data-nim="'+encodeURIComponent(nim)+'">'
+                    +'<td>'+escapeHtml(nim)+'</td>'
+                    +'<td>'+escapeHtml(nama)+'</td>'
+                    +'<td>'+escapeHtml(semester)+'</td>'
+                    +'<td>'+escapeHtml(jk)+'</td>'
+                    +'<td>'+escapeHtml(nohp)+'</td>'
+                    +'<td>'+escapeHtml(jurusan)+'</td>'
+                    +'<td class="action-btns">'
+                        +'<a href="/mahasiswa/'+encodeURIComponent(nim)+'" class="btn btn-info btn-sm">Lihat</a> '
+                        +'<a href="/mahasiswa/'+encodeURIComponent(nim)+'/edit" class="btn btn-warning btn-sm">Edit</a> '
+                        +'<button type="button" class="btn btn-danger btn-sm btn-hapus" data-nim="'+escapeAttr(nim)+'">Hapus</button>'
+                    +'</td>'
+                    +'</tr>'
+                );
+            }).join('');
 
-            fetch('/api/mahasiswa/' + encodeURIComponent(nim), {
-                method: 'DELETE',
-                headers: { 'Accept': 'application/json' }
-            })
-            .then(async response => {
-                let messageEl = document.getElementById('responseMessage');
-                if (response.ok) {
-                    // Hapus baris sebelum tampilkan pesan!
-                    const tr = btn.closest('tr');
-                    if (tr) tr.remove();
-                    showMessage('<div class="alert alert-success">Mahasiswa berhasil dihapus!</div>');
-                    // Periksa jika tabel kosong setelah penghapusan
-                    setTimeout(() => {
+            bindDeleteButtons();
+        } catch (e) {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center">Terjadi kesalahan jaringan.</td></tr>';
+        }
+    }
+
+    function bindDeleteButtons() {
+        document.querySelectorAll('.btn-hapus').forEach(function(btn){
+            btn.addEventListener('click', async function(){
+                const nim = this.getAttribute('data-nim');
+                if (!nim) return;
+                if (!confirm('Yakin ingin menghapus mahasiswa ini?')) return;
+                try {
+                    const res = await fetch('/api/mahasiswa/'+encodeURIComponent(nim), {
+                        method: 'DELETE',
+                        headers: withAuthHeaders({ 'Accept':'application/json' }),
+                    });
+                    const ct = res.headers.get('content-type') || '';
+                    const isJson = ct.includes('application/json');
+                    if (res.ok) {
+                        const tr = btn.closest('tr');
+                        if (tr) tr.remove();
+                        showMessage('<div class="alert alert-success">Mahasiswa berhasil dihapus!</div>');
                         if (document.querySelectorAll('tbody tr').length === 0) {
-                            document.querySelector('tbody').innerHTML = 
-                                '<tr><td colspan="7" class="text-center">Data mahasiswa tidak ditemukan.</td></tr>';
+                            document.getElementById('tbody').innerHTML = '<tr><td colspan="7" class="text-center">Data mahasiswa tidak ditemukan.</td></tr>';
                         }
-                    }, 200);
-                } else {
-                    let data = await response.json().catch(()=>({}));
-                    let msg = data && data.message ? data.message : 'Gagal menghapus data.';
-                    showMessage('<div class="alert alert-danger">' + msg + '</div>', false);
+                    } else {
+                        const payload = isJson ? await res.json().catch(()=>({})) : await res.text().catch(()=> '');
+                        const msg = isJson ? (payload.message || 'Gagal menghapus data.') : (payload || 'Gagal menghapus data.');
+                        showMessage('<div class="alert alert-danger">'+msg+'</div>', false);
+                    }
+                } catch (e) {
+                    showMessage('<div class="alert alert-danger">Terjadi kesalahan jaringan.</div>', false);
                 }
-            })
-            .catch(() => {
-                showMessage('<div class="alert alert-danger">Terjadi kesalahan jaringan.</div>', false);
             });
         });
-    });
+    }
+
+    function escapeHtml(s){
+        return String(s).replace(/[&<>"]/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]; });
+    }
+    function escapeAttr(s){
+        return String(s).replace(/"/g, '&quot;');
+    }
+
+    loadMahasiswa();
     </script>
 </body>
 </html>
